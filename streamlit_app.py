@@ -32,7 +32,8 @@ if instructions:
         https://docs.google.com/spreadsheets/d/14z36VYfeqhBksXlwgShmvPe1QcK7xLtmJuzhquDaqpQ/edit#gid=419264076  
     """)
 
-data_url = st.sidebar.text_input("Google Sheet URL", key="sheet_url", placeholder="https://docs.google.com/spreadsheets/d/14z36VYfeqhBksXlwgShmvPe1QcK7xLtmJuzhquDaqpQ/edit#gid=419264076")
+demo_url = "https://docs.google.com/spreadsheets/d/14z36VYfeqhBksXlwgShmvPe1QcK7xLtmJuzhquDaqpQ/edit#gid=419264076"
+data_url = st.sidebar.text_input("Google Sheet URL", key="sheet_url", value=demo_url)
 data_fields = []
 
 if data_url:
@@ -59,7 +60,6 @@ if data_url:
         if f not in ["county", "state", "precinct", "ward"]:
             data_field_index = lowercase.index(f)
 
-    # operation = st.sidebar.selectbox(label="What do you want to do with the data?", options=["Use values", "Count records", "Sum values", "Avg values"], index=0)
     index = st.sidebar.radio("Identify precincts using", options=['Precinct_id (one column)', 'Ward and precinct (two columns)'], index = 1)
 
     if index == "Precinct_id (one column)":
@@ -81,38 +81,25 @@ if data_url:
             st.sidebar.markdown("*Are these columns correct?*")
             st.write(e)
 
-    selected_field = st.sidebar.selectbox(label="Which column do you want to visualize?", options=fields, index=data_field_index)
+    col1, col2, col3 = st.columns(3)
+
+    selected_field = col1.selectbox(label="Which column do you want to see?", options=fields, index=data_field_index)
+    color_scale = col2.selectbox('Color scale', options=named_colorscales, index=19)
+    query = col3.text_input('Optional: Filter the data with a query', placeholder="ward == 12")
 
     if "%" in ef.iloc[0][selected_field]:
         ef[selected_field] = ef[selected_field].apply(lambda x: float(x.replace("%","")))
         percent = "%"
 
-    query = st.sidebar.text_input('Optional: Filter the data with a query')
     if query:
         ef = ef.query(query)
-        table.dataframe(ef, width=1000, height=200)
+        table.dataframe(ef)
 
     if indexed:
-        # if operation != "Use values":
-        #     if operation == "Count records":
-        #         ef = (ef
-        #                 .groupby(precinct_id)
-        #                 [selected_field].count()
-        #                 .reset_index())
-        #     elif operation == "Sum values":
-        #         ef = (ef
-        #                 .groupby(precinct_id)
-        #                 [selected_field].sum()
-        #                 .reset_index())
-        #     elif operation == "Avg values":
-        #         ef = (ef
-        #                 .groupby(precinct_id)
-        #                 [selected_field].mean()
-        #                 .reset_index())
-        table.dataframe(ef, width=800)
+        table.dataframe(ef)
         field_name = selected_field if "%" not in selected_field else selected_field.replace("%", "")
         ef['hover_text'] = ef.apply(lambda row: f"Ward: {row[ward_field]}\nPrecinct: {row[precinct_field]}\n{field_name}:{row[selected_field]}{percent}", axis=1)
-        color_scale = st.selectbox('Color scale', options=named_colorscales, index=19)
+
 
         # Geographic Map
         fig = go.Figure(
