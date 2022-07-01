@@ -22,7 +22,7 @@ if instructions:
         This is a tool for making maps of Chicago voting data by precinct.  
           
         To get started, paste the URL of a publicly viewable Google Sheet of precinct level data into the box.  
-        Then choose the field you want to visualize. (Mostly you'll want to "Use values")  
+        Then choose the field you want to visualize.
           
         To work, the sheet must have either a precinct_id ("full text") column, or a ward column and a precinct column. 
           
@@ -57,7 +57,7 @@ if data_url:
             data_field_index = lowercase.index(f)
 
     selected_field = st.sidebar.selectbox(label="Which column do you want to visualize?", options=fields, index=data_field_index)
-    operation = st.sidebar.selectbox(label="What do you want to do with the data?", options=["Use values", "Count records", "Sum values", "Avg values"], index=0)
+    # operation = st.sidebar.selectbox(label="What do you want to do with the data?", options=["Use values", "Count records", "Sum values", "Avg values"], index=0)
     index = st.sidebar.radio("Identify precincts using", options=['Precinct_id (one column)', 'Ward and precinct (two columns)'], index = 1)
 
     if index == "Precinct_id (one column)":
@@ -85,24 +85,24 @@ if data_url:
         table.dataframe(ef, width=1000, height=200)
 
     if indexed:
-        if operation != "Use values":
-            if operation == "Count records":
-                ef = (ef
-                        .groupby(precinct_id)
-                        [selected_field].count()
-                        .reset_index())
-            elif operation == "Sum values":
-                ef = (ef
-                        .groupby(precinct_id)
-                        [selected_field].sum()
-                        .reset_index())
-            elif operation == "Avg values":
-                ef = (ef
-                        .groupby(precinct_id)
-                        [selected_field].mean()
-                        .reset_index())
-            table.dataframe(ef, width=800)
-
+        # if operation != "Use values":
+        #     if operation == "Count records":
+        #         ef = (ef
+        #                 .groupby(precinct_id)
+        #                 [selected_field].count()
+        #                 .reset_index())
+        #     elif operation == "Sum values":
+        #         ef = (ef
+        #                 .groupby(precinct_id)
+        #                 [selected_field].sum()
+        #                 .reset_index())
+        #     elif operation == "Avg values":
+        #         ef = (ef
+        #                 .groupby(precinct_id)
+        #                 [selected_field].mean()
+        #                 .reset_index())
+        table.dataframe(ef, width=800)
+        ef['hover_text'] = ef.apply(lambda row: f"Ward: {row[ward_field]}\nPrecinct: {row[precinct_field]}\n{selected_field}:{row[selected_field]}", axis=1)
         color_scale = st.selectbox('Color scale', options=named_colorscales, index=19)
 
         # Geographic Map
@@ -113,6 +113,7 @@ if data_url:
                 featureidkey="properties.full_text",
                 z=ef[selected_field],
                 colorscale=color_scale,
+                text = ef['hover_text'],
                 # zmin=1,
                 # zmax=50,
                 marker_opacity=0.5,
