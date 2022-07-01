@@ -22,16 +22,14 @@ if instructions:
         This is a tool for making maps of Chicago voting data by precinct.  
           
         To get started, paste the URL of a publicly viewable Google Sheet of precinct level data into the box.  
-        Then choose the field you want to visualize. Mostly you'll want to "Use values"  
+        Then choose the field you want to visualize. (Mostly you'll want to "Use values")  
           
         To work, the sheet must have either a precinct_id ("full text") column, or a ward column and a precinct column. 
           
         The filter box lets you use logical expressions like "ward > 1" or "precinct == 12345"  
           
-        For an example, here's the url of precinct data from the 2020 Democratic Primary:  
-        https://docs.google.com/spreadsheets/d/1lm-mRnS8doF9xoLZ8qT8RJNu-SWxXqRsbLlUgP-N35g/edit#gid=631255818  
-          
-        Use the two column index and select "Ward" and "Precinct" as the columns.
+        For an example, here's the url of precinct data from the 2022 Primary:  
+        https://docs.google.com/spreadsheets/d/14z36VYfeqhBksXlwgShmvPe1QcK7xLtmJuzhquDaqpQ/edit#gid=419264076  
     """)
 data_url = st.sidebar.text_input("Google Sheet URL")
 data_fields = []
@@ -61,6 +59,7 @@ if data_url:
     selected_field = st.sidebar.selectbox(label="Which column do you want to visualize?", options=fields, index=data_field_index)
     operation = st.sidebar.selectbox(label="What do you want to do with the data?", options=["Use values", "Count records", "Sum values", "Avg values"], index=0)
     index = st.sidebar.radio("Identify precincts using", options=['Precinct_id (one column)', 'Ward and precinct (two columns)'], index = 1)
+
     if index == "Precinct_id (one column)":
         precinct_id = st.sidebar.selectbox(label="Field with full text precinct id", options = fields, index = full_text_index)
         indexed = True
@@ -71,10 +70,8 @@ if data_url:
             ward_field = st.sidebar.selectbox('Which column has the ward number?', options=fields, index = ward_field_index)
             precinct_field = st.sidebar.selectbox('Which column has the precinct number?', options=fields, index = precinct_field_index)
             ef = ef[(ef[ward_field].notna()) & (ef[precinct_field].notna())].copy()
-            ef[ward_field] = ef[ward_field].astype('int64')
-            ef[precinct_field] = ef[precinct_field].astype('int64')
 
-            ef[precinct_id] = ef.apply(lambda row: f"{row[ward_field]:02}{row[precinct_field]:03}", axis = 1)
+            ef[precinct_id] = ef.apply(lambda row: f"{int(row[ward_field]):02}{int(row[precinct_field]):03}", axis = 1)
             table.dataframe(ef, width=800)
             indexed = True
         except Exception as e:
