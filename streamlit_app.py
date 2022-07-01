@@ -22,7 +22,7 @@ if instructions:
         This is a tool for making maps of Chicago voting data by precinct.  
           
         To get started, paste the URL of a publicly viewable Google Sheet of precinct level data into the box.  
-        Then choose the field you want to visualize, and if you want to use the existing value, count the records, or sum/average the values.  
+        Then choose the field you want to visualize. Mostly you'll want to "Use values"  
           
         To work, the sheet must have either a precinct_id ("full text") column, or a ward column and a precinct column. 
           
@@ -42,18 +42,34 @@ if data_url:
     ef = df.copy()
     table = st.dataframe(ef, width=800)
     fields = list(df.columns)
-    selected_field = st.sidebar.selectbox(label="Data field", options=fields)
-    operation = st.sidebar.selectbox(label="What to do with the data field?", options= ["Use values", "Count records", "Sum values", "Avg values"], index=0)
-    index = st.sidebar.radio("Index type", options=['Precinct_id (one column)', 'Ward and precinct (two columns)'])
+
+    lowercase = [f.lower() for f in fields]
+    ward_field_index = 0
+    precinct_field_index = 0
+    full_text_index = 0
+    data_field_index = 0
+    for f in lowercase:
+        if "ward" in f:
+            ward_field_index = lowercase.index(f)
+        if "precinct" in f:
+            precinct_field_index = lowercase.index(f)
+        if "full_text" in f:
+            full_text_index = lowercase.index(f)
+        if f not in ["county", "state", "precinct", "ward"]:
+            data_field_index = lowercase.index(f)
+
+    selected_field = st.sidebar.selectbox(label="Which column do you want to visualize?", options=fields, index=data_field_index)
+    operation = st.sidebar.selectbox(label="What do you want to do with the data?", options=["Use values", "Count records", "Sum values", "Avg values"], index=0)
+    index = st.sidebar.radio("Identify precincts using", options=['Precinct_id (one column)', 'Ward and precinct (two columns)'], index = 1)
     if index == "Precinct_id (one column)":
-        precinct_id = st.sidebar.selectbox(label="Field with full text precinct id", options = fields)
+        precinct_id = st.sidebar.selectbox(label="Field with full text precinct id", options = fields, index = full_text_index)
         indexed = True
     elif index == 'Ward and precinct (two columns)':
         try:
             precinct_id = "precinct_id"
 
-            ward_field = st.sidebar.selectbox('Field with ward number', options=fields, index = 0)
-            precinct_field = st.sidebar.selectbox('Field with precinct number', options=fields)
+            ward_field = st.sidebar.selectbox('Which column has the ward number?', options=fields, index = ward_field_index)
+            precinct_field = st.sidebar.selectbox('Which column has the precinct number?', options=fields, index = precinct_field_index)
             ef = ef[(ef[ward_field].notna()) & (ef[precinct_field].notna())].copy()
             ef[ward_field] = ef[ward_field].astype('int64')
             ef[precinct_field] = ef[precinct_field].astype('int64')
