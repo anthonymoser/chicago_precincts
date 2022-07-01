@@ -2,8 +2,8 @@ import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
 import json
-
-
+import plotly.express as px
+named_colorscales = list(px.colors.named_colorscales())
 
 with open("data/Precincts (current).geojson") as data:
     geo = json.load(data)
@@ -20,7 +20,7 @@ data_fields = []
 
 if data_url:
 
-    df = pd.read_csv(google_sheet(data_url)).dropna()
+    df = pd.read_csv(google_sheet(data_url))
     ef = df.copy()
     table = st.dataframe(ef, width=800)
 
@@ -30,15 +30,15 @@ if data_url:
     precinct_id = st.sidebar.text_input(label="Field with full text precinct id", value="FULL_TEXT")
     ward_and_precinct = st.sidebar.checkbox('Use ward and precinct instead of precinct id')
     if ward_and_precinct:
-        ward_field = st.sidebar.text_input('Field with ward number', value="WARD")
-        precinct_field = st.sidebar.text_input('Field with precinct number', value= "PRECINCT")
+        ward_field = st.sidebar.selectbox('Field with ward number', options=list(df.columns))
+        precinct_field = st.sidebar.selectbox('Field with precinct number', options=list(df.columns))
         ef[precinct_id] = ef.apply(lambda row: f"{int(row[ward_field]):02}{int(row[precinct_field]):03}", axis = 1)
         table.dataframe(ef, width=800)
 
     query = st.sidebar.text_input('Optional: Filter the data with a query')
     if query:
         ef = ef.query(query)
-        table.dataframe(ef, width=800)
+        table.dataframe(ef, width=1000, height=200)
 
     if operation != "Use values":
         if operation == "Count values":
@@ -58,6 +58,7 @@ if data_url:
                     .reset_index())
         table.dataframe(ef, width=800)
 
+    color_scale = st.selectbox('Color scale', options=named_colorscales, index=19)
     # Geographic Map
     fig = go.Figure(
         go.Choroplethmapbox(
@@ -65,7 +66,7 @@ if data_url:
             locations=ef[precinct_id],
             featureidkey="properties.full_text",
             z=ef[selected_field],
-            # colorscale="sunsetdark",
+            colorscale=color_scale,
             # zmin=1,
             # zmax=50,
             marker_opacity=0.5,
@@ -81,3 +82,4 @@ if data_url:
     )
     fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
     st.plotly_chart(fig)
+
