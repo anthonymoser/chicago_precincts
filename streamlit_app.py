@@ -15,6 +15,24 @@ def google_sheet(sheet_url:str)->str:
 
 # Add title and header
 st.title("Chicago Precincts")
+st.write("A PublicDataTools project by Anthony Moser")
+instructions = st.sidebar.checkbox(label="Show instructions", value=1)
+if instructions:
+    st.markdown("""
+        This is a tool for making maps of Chicago voting data by precinct.  
+          
+        To get started, paste the URL of a publicly viewable Google Sheet of precinct level data into the box.  
+        Then choose the field you want to visualize, and if you want to use the existing value, count the records, or sum/average the values.  
+          
+        To work, the sheet must have either a precinct_id ("full text") column, or a ward column and a precinct column. 
+          
+        The filter box lets you use logical expressions like "ward > 1" or "precinct == 12345"  
+          
+        For an example, here's the url of precinct data from the 2020 Democratic Primary:  
+        https://docs.google.com/spreadsheets/d/1lm-mRnS8doF9xoLZ8qT8RJNu-SWxXqRsbLlUgP-N35g/edit#gid=631255818  
+          
+        Use the two column index and select "Ward" and "Precinct" as the columns.
+    """)
 data_url = st.sidebar.text_input("Google Sheet URL")
 data_fields = []
 
@@ -23,15 +41,16 @@ if data_url:
     df = pd.read_csv(google_sheet(data_url))
     ef = df.copy()
     table = st.dataframe(ef, width=800)
-
-    selected_field = st.sidebar.selectbox(label="Data field", options=list(df.columns))
-    operation = st.sidebar.selectbox(label="What to do with the data field?", options= ["Use values", "Count values", "Sum values", "Avg values"], index=0)
-
-    precinct_id = st.sidebar.text_input(label="Field with full text precinct id", value="FULL_TEXT")
-    ward_and_precinct = st.sidebar.checkbox('Use ward and precinct instead of precinct id')
-    if ward_and_precinct:
-        ward_field = st.sidebar.selectbox('Field with ward number', options=list(df.columns))
-        precinct_field = st.sidebar.selectbox('Field with precinct number', options=list(df.columns))
+    fields = list(df.columns)
+    selected_field = st.sidebar.selectbox(label="Data field", options=fields)
+    operation = st.sidebar.selectbox(label="What to do with the data field?", options= ["Use values", "Count records", "Sum values", "Avg values"], index=0)
+    index = st.sidebar.radio("Index type", options=['Precinct_id (one column)', 'Ward and precinct (two columns)'])
+    if index == "Precinct_id (one column)":
+        precinct_id = st.sidebar.selectbox(label="Field with full text precinct id", options = fields)
+    elif index == 'Ward and precinct (two columns)':
+        precinct_id = "precinct_id"
+        ward_field = st.sidebar.selectbox('Field with ward number', options=fields)
+        precinct_field = st.sidebar.selectbox('Field with precinct number', options=fields)
         ef[precinct_id] = ef.apply(lambda row: f"{int(row[ward_field]):02}{int(row[precinct_field]):03}", axis = 1)
         table.dataframe(ef, width=800)
 
@@ -41,7 +60,7 @@ if data_url:
         table.dataframe(ef, width=1000, height=200)
 
     if operation != "Use values":
-        if operation == "Count values":
+        if operation == "Count records":
             ef = (ef
                     .groupby(precinct_id)
                     [selected_field].count()
