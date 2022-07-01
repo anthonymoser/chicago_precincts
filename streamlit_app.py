@@ -47,58 +47,67 @@ if data_url:
     index = st.sidebar.radio("Index type", options=['Precinct_id (one column)', 'Ward and precinct (two columns)'])
     if index == "Precinct_id (one column)":
         precinct_id = st.sidebar.selectbox(label="Field with full text precinct id", options = fields)
+        indexed = True
     elif index == 'Ward and precinct (two columns)':
-        precinct_id = "precinct_id"
-        ward_field = st.sidebar.selectbox('Field with ward number', options=fields)
-        precinct_field = st.sidebar.selectbox('Field with precinct number', options=fields)
-        ef[precinct_id] = ef.apply(lambda row: f"{int(row[ward_field]):02}{int(row[precinct_field]):03}", axis = 1)
-        table.dataframe(ef, width=800)
+        try:
+            precinct_id = "precinct_id"
+            ward_field = st.sidebar.selectbox('Field with ward number', options=fields, index = 0)
+            precinct_field = st.sidebar.selectbox('Field with precinct number', options=fields)
+            ef[precinct_id] = ef.apply(lambda row: f"{int(row[ward_field]):02}{int(row[precinct_field]):03}", axis = 1)
+            table.dataframe(ef, width=800)
+            indexed = True
+        except Exception as e:
+            indexed = False
+            st.sidebar.markdown("*Are these columns correct?*")
 
     query = st.sidebar.text_input('Optional: Filter the data with a query')
     if query:
         ef = ef.query(query)
         table.dataframe(ef, width=1000, height=200)
 
-    if operation != "Use values":
-        if operation == "Count records":
-            ef = (ef
-                    .groupby(precinct_id)
-                    [selected_field].count()
-                    .reset_index())
-        elif operation == "Sum values":
-            ef = (ef
-                    .groupby(precinct_id)
-                    [selected_field].sum()
-                    .reset_index())
-        elif operation == "Avg values":
-            ef = (ef
-                    .groupby(precinct_id)
-                    [selected_field].mean()
-                    .reset_index())
-        table.dataframe(ef, width=800)
+    if indexed:
+        if operation != "Use values":
+            if operation == "Count records":
+                ef = (ef
+                        .groupby(precinct_id)
+                        [selected_field].count()
+                        .reset_index())
+            elif operation == "Sum values":
+                ef = (ef
+                        .groupby(precinct_id)
+                        [selected_field].sum()
+                        .reset_index())
+            elif operation == "Avg values":
+                ef = (ef
+                        .groupby(precinct_id)
+                        [selected_field].mean()
+                        .reset_index())
+            table.dataframe(ef, width=800)
 
-    color_scale = st.selectbox('Color scale', options=named_colorscales, index=19)
-    # Geographic Map
-    fig = go.Figure(
-        go.Choroplethmapbox(
-            geojson=geo,
-            locations=ef[precinct_id],
-            featureidkey="properties.full_text",
-            z=ef[selected_field],
-            colorscale=color_scale,
-            # zmin=1,
-            # zmax=50,
-            marker_opacity=0.5,
-            marker_line_width=0,
+        color_scale = st.selectbox('Color scale', options=named_colorscales, index=19)
+
+        # Geographic Map
+        fig = go.Figure(
+            go.Choroplethmapbox(
+                geojson=geo,
+                locations=ef[precinct_id],
+                featureidkey="properties.full_text",
+                z=ef[selected_field],
+                colorscale=color_scale,
+                # zmin=1,
+                # zmax=50,
+                marker_opacity=0.5,
+                marker_line_width=0,
+            )
         )
-    )
-    fig.update_layout(
-        mapbox_style="carto-positron",
-        mapbox_zoom=10.6,
-        mapbox_center={"lat":41.8823348, "lon": -87.6282938},
-        width=800,
-        height=800,
-    )
-    fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
-    st.plotly_chart(fig)
+        fig.update_layout(
+            mapbox_style="carto-positron",
+            mapbox_zoom=10.6,
+            mapbox_center={"lat":41.8823348, "lon": -87.6282938},
+            width=800,
+            height=800,
+        )
+        fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
+        st.plotly_chart(fig)
+
 
