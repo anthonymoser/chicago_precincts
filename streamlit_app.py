@@ -26,7 +26,7 @@ if instructions:
           
         To work, the sheet must have either a precinct_id ("full text") column, or a ward column and a precinct column. 
           
-        The filter box lets you use logical expressions like "ward > 1" or "precinct == 12345"  
+        The filter box lets you use logical expressions like "Ward > 1" or "Precinct == 12345"  
           
         For an example, here's the url of precinct data from the 2022 Primary:  
         https://docs.google.com/spreadsheets/d/14z36VYfeqhBksXlwgShmvPe1QcK7xLtmJuzhquDaqpQ/edit#gid=419264076  
@@ -85,7 +85,7 @@ if data_url:
 
     selected_field = col1.selectbox(label="Which column do you want to see?", options=fields, index=data_field_index)
     color_scale = col2.selectbox('Color scale', options=named_colorscales, index=19)
-    query = col3.text_input('Optional: Filter the data with a query', placeholder="ward == 12")
+    query = col3.text_input('Optional: Filter the data with a query', placeholder="Ward == 12")
 
     if "%" in ef.iloc[0][selected_field]:
         ef[selected_field] = ef[selected_field].apply(lambda x: float(x.replace("%","")))
