@@ -51,14 +51,20 @@ if data_url:
     elif index == 'Ward and precinct (two columns)':
         try:
             precinct_id = "precinct_id"
+
             ward_field = st.sidebar.selectbox('Field with ward number', options=fields, index = 0)
             precinct_field = st.sidebar.selectbox('Field with precinct number', options=fields)
-            ef[precinct_id] = ef.apply(lambda row: f"{int(row[ward_field]):02}{int(row[precinct_field]):03}", axis = 1)
+            ef = ef[(ef[ward_field].notna()) & (ef[precinct_field].notna())].copy()
+            ef[ward_field] = ef[ward_field].astype('int64')
+            ef[precinct_field] = ef[precinct_field].astype('int64')
+
+            ef[precinct_id] = ef.apply(lambda row: f"{row[ward_field]:02}{row[precinct_field]:03}", axis = 1)
             table.dataframe(ef, width=800)
             indexed = True
         except Exception as e:
             indexed = False
             st.sidebar.markdown("*Are these columns correct?*")
+            st.write(e)
 
     query = st.sidebar.text_input('Optional: Filter the data with a query')
     if query:
