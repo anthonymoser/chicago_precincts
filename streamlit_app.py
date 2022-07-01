@@ -31,12 +31,13 @@ if instructions:
         For an example, here's the url of precinct data from the 2022 Primary:  
         https://docs.google.com/spreadsheets/d/14z36VYfeqhBksXlwgShmvPe1QcK7xLtmJuzhquDaqpQ/edit#gid=419264076  
     """)
-data_url = st.sidebar.text_input("Google Sheet URL")
+
+data_url = st.sidebar.text_input("Google Sheet URL", key="sheet_url", placeholder="https://docs.google.com/spreadsheets/d/14z36VYfeqhBksXlwgShmvPe1QcK7xLtmJuzhquDaqpQ/edit#gid=419264076")
 data_fields = []
 
 if data_url:
 
-    df = pd.read_csv(google_sheet(data_url))
+    df = pd.read_csv(google_sheet(data_url)).convert_dtypes()
     ef = df.copy()
     table = st.dataframe(ef, width=800)
     fields = list(df.columns)
@@ -46,6 +47,8 @@ if data_url:
     precinct_field_index = 0
     full_text_index = 0
     data_field_index = 0
+    percent = ""
+
     for f in lowercase:
         if "ward" in f:
             ward_field_index = lowercase.index(f)
@@ -56,7 +59,6 @@ if data_url:
         if f not in ["county", "state", "precinct", "ward"]:
             data_field_index = lowercase.index(f)
 
-    selected_field = st.sidebar.selectbox(label="Which column do you want to visualize?", options=fields, index=data_field_index)
     # operation = st.sidebar.selectbox(label="What do you want to do with the data?", options=["Use values", "Count records", "Sum values", "Avg values"], index=0)
     index = st.sidebar.radio("Identify precincts using", options=['Precinct_id (one column)', 'Ward and precinct (two columns)'], index = 1)
 
@@ -78,6 +80,12 @@ if data_url:
             indexed = False
             st.sidebar.markdown("*Are these columns correct?*")
             st.write(e)
+
+    selected_field = st.sidebar.selectbox(label="Which column do you want to visualize?", options=fields, index=data_field_index)
+
+    if "%" in ef.iloc[0][selected_field]:
+        ef[selected_field] = ef[selected_field].apply(lambda x: float(x.replace("%","")))
+        percent = "%"
 
     query = st.sidebar.text_input('Optional: Filter the data with a query')
     if query:
@@ -102,7 +110,8 @@ if data_url:
         #                 [selected_field].mean()
         #                 .reset_index())
         table.dataframe(ef, width=800)
-        ef['hover_text'] = ef.apply(lambda row: f"Ward: {row[ward_field]}\nPrecinct: {row[precinct_field]}\n{selected_field}:{row[selected_field]}", axis=1)
+        field_name = selected_field if "%" not in selected_field else selected_field.replace("%", "")
+        ef['hover_text'] = ef.apply(lambda row: f"Ward: {row[ward_field]}\nPrecinct: {row[precinct_field]}\n{field_name}:{row[selected_field]}{percent}", axis=1)
         color_scale = st.selectbox('Color scale', options=named_colorscales, index=19)
 
         # Geographic Map
