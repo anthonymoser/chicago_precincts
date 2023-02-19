@@ -5,9 +5,32 @@ import json
 import plotly.express as px
 named_colorscales = list(px.colors.named_colorscales())
 
-with open("data/Precincts (current).geojson") as data:
-    geo = json.load(data)
+@st.cache_data
+def get_precincts() ->dict:
+    precincts = {}
+    
+    with open("data/Precincts 2012-2022.geojson") as data:
+        precincts['2012-2022']= json.load(data)
+        
+    with open("data/Precincts 2023-.geojson") as data:
+        precincts['2023-']= json.load(data)
+        
+    return precincts 
 
+def clean_columns(df:pd.DataFrame)->pd.DataFrame:
+    df = df.convert_dtypes()
+    lowercase = { 
+        c: c.lower().strip().replace(' ', '_') 
+        for c in df.columns }
+    df = df.rename(columns=lowercase)
+    return df
+
+def make_pretty(styler):
+    # styler.set_caption("Weather Conditions")
+    # styler.format(rain_condition)
+    # styler.format_index(lambda v: v.strftime("%A"))
+    styler.background_gradient(cmap="YlGnBu")
+    return styler
 
 def google_sheet(sheet_url:str)->str:
   url = sheet_url.replace("/edit#gid=", "/export?format=csv&gid=")
@@ -26,7 +49,7 @@ if instructions:
           
         To work, the sheet must have either a precinct_id ("full text") column, or a ward column and a precinct column. 
           
-        The filter box lets you use logical expressions like "Ward > 1" or "Precinct == 12345"  
+        The filter box lets you use logical expressions like "ward > 1" or "precinct == 12345"  
           
         For an example, here's the url of precinct data from the 2022 Primary:  
         https://docs.google.com/spreadsheets/d/14z36VYfeqhBksXlwgShmvPe1QcK7xLtmJuzhquDaqpQ/edit#gid=419264076  
@@ -35,12 +58,15 @@ if instructions:
 demo_url = "https://docs.google.com/spreadsheets/d/14z36VYfeqhBksXlwgShmvPe1QcK7xLtmJuzhquDaqpQ/edit#gid=419264076"
 data_url = st.sidebar.text_input("Google Sheet URL", key="sheet_url", value=demo_url)
 data_fields = []
+precincts = get_precincts()
+precinct_years = st.sidebar.selectbox('Choose precinct boundaries to use', options=[*list(precincts.keys())], index=0)
+geo = precincts[precinct_years]
 
 if data_url:
 
-    df = pd.read_csv(google_sheet(data_url)).convert_dtypes()
+    df = pd.read_csv(google_sheet(data_url), low_memory=True).convert_dtypes()
     ef = df.copy()
-    table = st.dataframe(ef, width=800)
+    table = st.empty()
     fields = list(df.columns)
 
     lowercase = [f.lower() for f in fields]
@@ -71,10 +97,11 @@ if data_url:
 
             ward_field = st.sidebar.selectbox('Which column has the ward number?', options=fields, index = ward_field_index)
             precinct_field = st.sidebar.selectbox('Which column has the precinct number?', options=fields, index = precinct_field_index)
+            
             ef = ef[(ef[ward_field].notna()) & (ef[precinct_field].notna())].copy()
-
             ef[precinct_id] = ef.apply(lambda row: f"{int(row[ward_field]):02}{int(row[precinct_field]):03}", axis = 1)
-            table.dataframe(ef, width=800)
+            ef[precinct_id] = ef[precinct_id].astype('str')
+            
             indexed = True
         except Exception as e:
             indexed = False
@@ -87,19 +114,18 @@ if data_url:
     color_scale = col2.selectbox('Color scale', options=named_colorscales, index=19)
     query = col3.text_input('Optional: Filter the data with a query', placeholder="Ward == 12")
 
-    if "%" in ef.iloc[0][selected_field]:
+    if "%" in str(ef.iloc[0][selected_field]):
         ef[selected_field] = ef[selected_field].apply(lambda x: float(x.replace("%","")))
         percent = "%"
 
     if query:
         ef = ef.query(query)
-        table.dataframe(ef)
 
     if indexed:
-        table.dataframe(ef)
+        table.dataframe(ef.style.pipe(make_pretty), width=800)
         field_name = selected_field if "%" not in selected_field else selected_field.replace("%", "")
         ef['hover_text'] = ef.apply(lambda row: f"Ward: {row[ward_field]}\nPrecinct: {row[precinct_field]}\n{field_name}:{row[selected_field]}{percent}", axis=1)
-
+        ef['precinct_id'] = ef.precinct_id.astype('str')
 
         # Geographic Map
         fig = go.Figure(
@@ -110,8 +136,6 @@ if data_url:
                 z=ef[selected_field],
                 colorscale=color_scale,
                 text = ef['hover_text'],
-                # zmin=1,
-                # zmax=50,
                 marker_opacity=0.5,
                 marker_line_width=0,
             )
@@ -125,5 +149,3 @@ if data_url:
         )
         fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
         st.plotly_chart(fig)
-
-
