@@ -33,7 +33,8 @@ def make_pretty(styler):
     return styler
 
 def google_sheet(sheet_url:str)->str:
-  url = sheet_url.replace("/edit#gid=", "/export?format=csv&gid=")
+  parts = sheet_url.split("/edit")
+  url = f'{parts[0]}/export?format=csv'
   return url
 
 # Add title and header
@@ -51,19 +52,18 @@ if instructions:
           
         The filter box lets you use logical expressions like "ward > 1" or "precinct == 12345"  
           
-        For an example, here's the url of precinct data from the 2022 Primary:  
-        https://docs.google.com/spreadsheets/d/14z36VYfeqhBksXlwgShmvPe1QcK7xLtmJuzhquDaqpQ/edit#gid=419264076  
+        For an example, here's the url of precinct data from the 2023 February Municipal election:  
+        https://docs.google.com/spreadsheets/d/1uQ0utEkv4KWj1u_xb-KwybEchboEoahOEZJ6G8_E3dQ/edit?usp=sharing  
     """)
 
-demo_url = "https://docs.google.com/spreadsheets/d/14z36VYfeqhBksXlwgShmvPe1QcK7xLtmJuzhquDaqpQ/edit#gid=419264076"
+demo_url = "https://docs.google.com/spreadsheets/d/1uQ0utEkv4KWj1u_xb-KwybEchboEoahOEZJ6G8_E3dQ/edit?usp=sharing"
 data_url = st.sidebar.text_input("Google Sheet URL", key="sheet_url", value=demo_url)
 data_fields = []
 precincts = get_precincts()
-precinct_years = st.sidebar.selectbox('Choose precinct boundaries to use', options=[*list(precincts.keys())], index=0)
+precinct_years = st.sidebar.selectbox('Choose precinct boundaries to use', options=[*list(precincts.keys())], index=1)
 geo = precincts[precinct_years]
 
 if data_url:
-
     df = pd.read_csv(google_sheet(data_url), low_memory=True).convert_dtypes()
     ef = df.copy()
     table = st.empty()
@@ -114,7 +114,7 @@ if data_url:
     color_scale = col2.selectbox('Color scale', options=named_colorscales, index=19)
     query = col3.text_input('Optional: Filter the data with a query', placeholder="Ward == 12")
 
-    if "%" in str(ef.iloc[0][selected_field]):
+    if "%" in str(ef.iloc[0][selected_field]) or "_pct" in str(ef.iloc[0][selected_field]) :
         ef[selected_field] = ef[selected_field].apply(lambda x: float(x.replace("%","")))
         percent = "%"
 
